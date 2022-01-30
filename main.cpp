@@ -1,4 +1,6 @@
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_events.h>
+#include <SDL2/SDL_mouse.h>
 #include <cstdint>
 #include <iostream>
 #include <memory>
@@ -22,7 +24,7 @@ struct Coord
     uint32_t y;
 };
 
-const inline static 
+const inline static
 void error_message_memory(const char* msg)
 {
     std::cerr << "[Error] Memory: Unable to allocate memory for "
@@ -82,7 +84,7 @@ const void draw_rectangle(std::vector<uint32_t> &pix,
     }
 }
 
-std::vector<uint32_t> 
+std::vector<uint32_t>
 normalize_values(std::vector<uint32_t> distances)
 {
     std::vector<uint32_t> values(distances.size());
@@ -95,7 +97,7 @@ normalize_values(std::vector<uint32_t> distances)
         values[i] += val << 16; // Red
         values[i] += val << 8; // Green
         values[i] += val << 0; // Blue
-        
+       
     }
     return values;
 }
@@ -161,28 +163,35 @@ int main(const int argc, const char* argv[])
                                              window_global.h);
 
     if (texture == nullptr) error_message_memory("texture");
-    std::vector<uint32_t> pixels(window_global.w * window_global.h);
-    std::vector<uint32_t> distances = calculate_distances(window_global,
-                                                          Coord { 100, 200 },
-                                                          pixels);
 
-    std::vector<uint32_t> colors = normalize_values(distances);
-    
+    std::vector<uint32_t> pixels(window_global.w * window_global.h);
+    std::vector<uint32_t> distances(pixels.size());
+    std::vector<uint32_t> colors(pixels.size());
+    int x, y = 0; // Mouse position
+   
     bool running = true;
     while (running)
     {
         while(SDL_PollEvent(&event))
         {
-            if (event.type == SDL_QUIT) 
+            if (event.type == SDL_QUIT)
             {
                 running = false;
                 break;
             }
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
-        // draw_rectangle(pixels, window_global, 20, 20, 100, 200, 0xFFFFFFFF);
-        // draw_rectangle(pixels, window_global, 500, 40, 100, 10, 0xFFFFFFFF);
+        SDL_PumpEvents();
+        SDL_GetMouseState(&x, &y);
+        distances = calculate_distances(window_global,
+                                        Coord {
+                                            (uint32_t)(x),
+                                            (uint32_t)(y)
+                                            },
+                                        pixels);
+
+        colors = normalize_values(distances);
         pixels = colors;
 
         SDL_UpdateTexture(texture, nullptr, static_cast<const void*>(pixels.data()), window_global.w * sizeof(uint32_t));

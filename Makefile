@@ -7,3 +7,6 @@ imageViewer: main.cpp
 
 debug: main.cpp
 	$(CXX) $(CXXFLAGS) -g main.cpp -o imageViewer $(LDFLAGS)
+
+clean:
+	rm -rf imageViewer
