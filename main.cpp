@@ -11,6 +11,8 @@
 #include <cmath>
 #include <algorithm>
 
+constexpr uint32_t GREEN = 0xFF00FF00;
+
 struct Window
 {
     uint32_t w;
@@ -24,44 +26,53 @@ struct Coord
     uint32_t y;
 };
 
-const inline static
+const  static
 void error_message_memory(const char* msg)
 {
     std::cerr << "[Error] Memory: Unable to allocate memory for "
               << msg << " exiting..." << '\n';
 }
 
-const inline
-size_t coord_to_index(Window &win, uint32_t x, uint32_t y)
+constexpr size_t coord_to_index(Window &win, uint32_t x, uint32_t y)
 {
     return (win.w * y + x);
 }
 
-const inline
-Coord index_to_coord(Window &win, size_t index)
+constexpr Coord index_to_coord(Window &win, size_t index)
 {
     return (Coord { (uint32_t)index % win.w, (uint32_t)index / win.w });
 }
 
-const inline
-uint32_t distance(Coord &point, Coord &pixel)
+constexpr float distance(Coord point, Coord pixel)
 {
-    return floor(sqrt(
-            pow(abs((float)point.x - pixel.x), 2) +
-            pow(abs((float)point.y - pixel.y), 2)));
+    return sqrt(
+           ((float)point.x - (float)pixel.x) * ((float)point.x - (float)pixel.x) +
+           ((float)point.y - (float)pixel.y) * ((float)point.y - (float)pixel.y));
 }
 
-std::vector<uint32_t>
-calculate_distances(Window &win, Coord point, std::vector<uint32_t> &pixels)
+constexpr float max_distance(Window *win, int mouse_x, int mouse_y)
 {
-    std::vector<uint32_t> distances(win.w * win.h);
-    Coord pixel;
-    for (size_t i = 0; i < pixels.size(); i++)
-    {
-        pixel = index_to_coord(win, i);
-        distances[i] = distance(point, pixel);
+    if ((uint32_t)mouse_x <= (win->w / 2) && (uint32_t)mouse_y <= (win->h / 2)) { // Top left corner
+        return distance(Coord{(uint32_t)mouse_x, (uint32_t)mouse_y}, Coord{win->w, win->h});
+    } 
+    else if ((uint32_t)mouse_x > (win->w / 2) && (uint32_t)mouse_y < (win->h / 2)) { // Top right corner
+        return distance(Coord{(uint32_t)mouse_x, (uint32_t)mouse_y}, Coord{0, win->h});
+    } 
+    else if ((uint32_t)mouse_x > win->w / 2 && (uint32_t)mouse_y >= win->h / 2) { // Bottom right corner
+        return distance(Coord{(uint32_t)mouse_x, (uint32_t)mouse_y}, Coord{0, 0});
+    } 
+    else {                                                  // Bottom left corner
+        return distance(Coord{(uint32_t)mouse_x, (uint32_t)mouse_y}, Coord{win->w, 0});
     }
-    return distances;
+    return 0;
+}
+
+const uint32_t val_to_grayscale(uint32_t x)
+{
+    return (0xFF000000 +
+            (x << 16)  +
+            (x << 8)   +
+            (x));
 }
 
 const void draw_rectangle(std::vector<uint32_t> &pix,
@@ -82,24 +93,6 @@ const void draw_rectangle(std::vector<uint32_t> &pix,
         }
         line_start = win.w * (y + i) + x;
     }
-}
-
-std::vector<uint32_t>
-normalize_values(std::vector<uint32_t> distances)
-{
-    std::vector<uint32_t> values(distances.size());
-    uint32_t min_value = *std::min_element(distances.begin(), distances.end());
-    uint32_t max_value = *std::max_element(distances.begin(), distances.end());
-    for (size_t i = 0; i < distances.size(); i++)
-    {
-        uint32_t val = floor(255 * ((float)distances[i] - (float)min_value) / (float)max_value);
-        values[i] = 0xFF000000; // Alpha
-        values[i] += val << 16; // Red
-        values[i] += val << 8; // Green
-        values[i] += val << 0; // Blue
-       
-    }
-    return values;
 }
 
 uint32_t parse_string(std::string str)
@@ -124,6 +117,13 @@ uint32_t parse_string(std::string str)
         }
     }
     return acc;
+}
+
+void clear_screen(std::vector<uint32_t> &screen_pixels, uint32_t color)
+{
+    for (auto &p: screen_pixels) {
+        p = color;
+    }
 }
 
 int main(const int argc, const char* argv[])
@@ -165,8 +165,6 @@ int main(const int argc, const char* argv[])
     if (texture == nullptr) error_message_memory("texture");
 
     std::vector<uint32_t> pixels(window_global.w * window_global.h);
-    std::vector<uint32_t> distances(pixels.size());
-    std::vector<uint32_t> colors(pixels.size());
     int x, y = 0; // Mouse position
    
     bool running = true;
@@ -184,15 +182,15 @@ int main(const int argc, const char* argv[])
 
         SDL_PumpEvents();
         SDL_GetMouseState(&x, &y);
-        distances = calculate_distances(window_global,
-                                        Coord {
-                                            (uint32_t)(x),
-                                            (uint32_t)(y)
-                                            },
-                                        pixels);
 
-        colors = normalize_values(distances);
-        pixels = colors;
+        float max = max_distance(&window_global, x, y);
+        for (size_t i = 0; i < pixels.size(); i++) {
+            Coord pixel_coord = index_to_coord(window_global, i);
+            float calculated_distance = distance(Coord{(uint32_t)x, (uint32_t)y}, pixel_coord);
+
+            pixels[i] = val_to_grayscale(floor(calculated_distance / max * 255));
+        }
+
 
         SDL_UpdateTexture(texture, nullptr, static_cast<const void*>(pixels.data()), window_global.w * sizeof(uint32_t));
         SDL_RenderClear(renderer);
