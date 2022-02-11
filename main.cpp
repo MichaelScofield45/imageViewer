@@ -42,7 +42,8 @@ inline constexpr size_t coord_to_index(Window *win, uint32_t x, uint32_t y)
 
 inline constexpr Coord index_to_coord(Window *win, size_t index)
 {
-    return (Coord { (int32_t)index % (int32_t)win->w, (int32_t)index / (int32_t)win->w });
+    return (Coord { (int32_t)index % (int32_t)win->w,
+                    (int32_t)index / (int32_t)win->w });
 }
 
 constexpr float distance(Coord a, Coord b)
@@ -57,7 +58,8 @@ inline constexpr uint32_t val_to_grayscale(uint8_t x)
     return (0xFF000000 | (x << (8 * 2)) | (x << (8 * 1)) | (x << (8 * 0)));
 }
 
-inline constexpr float lerp(int32_t a, int32_t b, float t) {
+inline constexpr float lerp(int32_t a, int32_t b, float t)
+{
     return a + (b - a) * t;
 }
   

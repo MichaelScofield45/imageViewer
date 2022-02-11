@@ -25,24 +25,24 @@ manager.
 ## Compiling
 
 For unoptimized, standard compilation just run:
-```
+```console
 make
 ```
 
 For optimized (-O2 in gcc) compilation run:
-```
+```console
 make release
 ```
 
 For compilation with debug information, run:
-```
+```console
 make debug
 ```
 
 ## Usage
 
 To actually launch `imageViewer`, run the following:
-```
+```console
 ./imageViewer [WINDOW_WIDTH] [WINDOW_HEIGHT]
 ```
 where `[WINDOW_WIDTH]` `[WINDOW_HEIGHT]` are the dimensions of the desired window
