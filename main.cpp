@@ -61,7 +61,7 @@ inline constexpr float lerp(int32_t a, int32_t b, float t) {
     return a + (b - a) * t;
 }
   
-void draw_line(std::vector<uint32_t> *pix,
+void draw_line(std::vector<uint32_t> *screen_pixels,
                Window *win,
                Coord a,
                Coord b,
@@ -73,15 +73,17 @@ void draw_line(std::vector<uint32_t> *pix,
     for (float i = 0.f; i <= 1.f; i += 1.f / distance(a, b)) {
         x_point = (uint32_t)lerp(a.x, b.x, i);
         y_point = (uint32_t)lerp(a.y, b.y, i);
-        (*pix)[coord_to_index(win, x_point, y_point)] = col;
+        (*screen_pixels)[coord_to_index(win, x_point, y_point)] = col;
     }
 }
 
-void draw_rectangle(std::vector<uint32_t> *pix,
+void draw_rectangle(std::vector<uint32_t> *screen_pixels,
                           Window *win,
                           Rect *rect,
                           uint32_t col)
 {
+    // Edge cases for drawing the rectangle, avoiding segfaulting by indexing
+    // a negative value.
     if (rect->pos.x < 0) {
         rect->pos.x = 0;
         if (rect->pos.y < 0) 
@@ -96,7 +98,7 @@ void draw_rectangle(std::vector<uint32_t> *pix,
 
     for (size_t i = 0; i < rect->height; i++) {
         for (size_t j = 0; j < rect->width; j++) {
-            (*pix)[line_start + j] = col;
+            (*screen_pixels)[line_start + j] = col;
         }
         line_start = win->w * (rect->pos.y + i) + rect->pos.x;
     }
@@ -105,6 +107,7 @@ void draw_rectangle(std::vector<uint32_t> *pix,
 constexpr bool mouse_in_rect(Rect *rect, int *mouse_x, int *mouse_y) {
     Coord up_left_bound{rect->pos.x,
                         rect->pos.y};
+
     Coord down_right_bound{rect->pos.x + (int32_t)rect->width,
                            rect->pos.y + (int32_t)rect->height};    
 
